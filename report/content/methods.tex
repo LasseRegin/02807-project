@@ -1,0 +1,19 @@
+%!TEX root = ../main.tex
+
+\section{Methods}
+
+For modelling the distribution of the post tags an unsupervised approach is used.
+
+The data will be presented using feature-hashing. Each post will be
+transformed to a fixed-size feature vector resulting in each post being a point
+in a given feature space.
+
+A training set of posts will be clustered into $K$ clusters where $K$ is the
+number of distinct tags in the data, resulting in $K$ cluster centroids.
+
+When predicting a given post the tags of the closest $n$ centroids will be
+assigned the post.
+
+The cluster algorithm \textit{K-means} will initially be used, and due to the
+size of the dataset a normal trivial implementation of the algorithm will not
+suffice, hence a parallel version will be implemented.
