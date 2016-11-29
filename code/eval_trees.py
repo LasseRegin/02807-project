@@ -2,6 +2,8 @@
 import csv
 import numpy as np
 
+from sklearn.externals import joblib
+
 import helpers
 import config
 
@@ -11,16 +13,15 @@ tags, tag2idx, tag_count = helpers.read_tags()
 # Read words
 words, word2idx, word_count = helpers.read_words()
 
-# Load means
-with open(config.paths.MU, 'rb') as f:
-    mu = np.load(f)
-
 # Get chunks
-chunk_reader = helpers.ChunkReader(post_filename=config.paths.TEST_DATA_IDX, chunk_size=config.data.CHUNK_SIZE)
+chunk_reader = helpers.ChunkReader(post_filename=config.paths.TEST_DATA_IDX, chunk_size=config.data.CHUNK_SIZE_TREES)
 chunks = [chunk for chunk in chunk_reader]
 
-# Load cluster tags dict
-cluster2tag = config.data.load_cluster_tags()
+# Load classifier filenames
+classifier_filenames = config.data.load_classifier_filenames()
+
+# Load classifiers
+classifiers = [joblib.load(filename) for filename in classifier_filenames]
 
 with open(config.paths.TEST_DATA_IDX, 'r') as f:
 
@@ -32,18 +33,31 @@ with open(config.paths.TEST_DATA_IDX, 'r') as f:
         # Convert to sparse matrix
         X, y_tags = helpers.chunk_to_sparse_mat(chunk, word_count)
 
-        # Get closest cluster indices
-        sorted_idx = helpers.sparse_matrix_to_sorted_cluster_indices(X, mu)
+        # Predict tag probabilities
+        clf_class_probs = []
+        for clf in classifiers:
+            probs = clf.predict_proba(X)
+
+            # Extract class probabilities
+            class_probs = np.asarray([1.0 - prob[:,0] for prob in probs]).T
+            clf_class_probs.append(class_probs)
+
+        # Compute mean class probabilities across classifiers
+        clf_class_probs = np.asarray(clf_class_probs)
+        clf_class_probs = clf_class_probs.mean(axis=0)
+
+        # Sort by highest probability
+        sorted_class_indices = clf_class_probs.argsort(axis=1)[:,::-1]
 
         # Count true retrieved tags
-        for i, closest_indices in enumerate(sorted_idx):
-            true_tags = [cluster2tag[idx] for idx in y_tags[i]]
+        for i, closest_indices in enumerate(sorted_class_indices):
+            true_tags = y_tags[i]
             total_tag_counts += len(true_tags)
             for k in range(0, tag_count):
-                tag_predictions = [cluster2tag[cluster] for cluster in closest_indices[0:k+1]]
                 for tag in true_tags:
-                    if tag in tag_predictions:
+                    if tag in closest_indices[0:k+1]:
                         true_counts_at_k[k] += 1
+
 
     # Compute precision at k (P@K)
     precision = {k: true_counts_at_k[k] / total_tag_counts for k in range(0, tag_count)}

@@ -33,16 +33,25 @@ class paths:
     # Evaluations
     PRECISION_AT_K = os.path.join(DATA_FOLDER, 'precision.csv')
 
-    # # Memory-mapped files
-    # MEM_MAP_INPUT  = os.path.join(DATA_FOLDER, 'mem_map_input.dat')
-    # MEM_MAP_TARGET = os.path.join(DATA_FOLDER, 'mam_map_target.dat')
+    # Classifiers folder
+    MODELS_FOLDER = os.path.join(FILEPATH, 'models')
+
+    # Classifier filename
+    CLASSIFIERS = os.path.join(DATA_FOLDER, 'classifiers.csv')
 
 
 class data:
     TEST_FRACTION = 0.33
 
-    CHUNK_SIZE = 20 * 1024 ** 2 # 20MB
-    CHUNK_SIZE_DEBUG = 1024 ** 2  # 1MB
+    #CHUNK_SIZE = 20 * 1024 ** 2 # 20MB
+    #CHUNK_SIZE = 10 * 1024 ** 2 # 10MB
+    #CHUNK_SIZE = 5 * 1024 ** 2 # 5MB
+    #CHUNK_SIZE = 2 * 1024 ** 2 # 2MB
+    CHUNK_SIZE = 1 * 1024 ** 2 # 1MB
+    #CHUNK_SIZE_TREES = 1 * 1024 ** 2 # 1MB
+    CHUNK_SIZE_TREES = 2 * 1024 ** 2 # 2MB
+    #CHUNK_SIZE_TREES = 5 * 1024 ** 2 # 2MB
+    #CHUNK_SIZE_TREES = 10 * 1024 ** 2 # 2MB
 
     @classmethod
     def save_cluster_tags(cls, cluster_tags):
@@ -54,6 +63,19 @@ class data:
         with open(paths.CLUSTER_TAGS, 'rb') as f:
             return pickle.load(f)
 
+    @classmethod
+    def save_classifier_filenames(cls, classifier_filenames):
+        with open(paths.CLASSIFIERS, 'w') as f:
+            for filename in classifier_filenames:
+                f.write('%s\n' % (filename))
+
+
+    @classmethod
+    def load_classifier_filenames(cls):
+        with open(paths.CLASSIFIERS, 'r') as f:
+            filenames = [filename.rstrip('\n') for filename in f]
+        return filenames
+
 
 class algorithm:
     # Convergence criteria
@@ -63,6 +85,7 @@ class algorithm:
     # Number of processes to use in parallel
     # TODO: Maybe use 2 * cpu_count (Hyperthreading)
     PROCESS_COUNT = int(os.environ.get('PROCESS_COUNT', multiprocessing.cpu_count()))
+    #PROCESS_COUNT = int(os.environ.get('PROCESS_COUNT', multiprocessing.cpu_count() * 2))
 
 
 

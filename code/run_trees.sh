@@ -1,6 +1,6 @@
 
 # Parameters
-#export MAX_POSTS=100000
+#export MAX_POSTS=1000000
 
 
 # Extract posts
@@ -13,10 +13,10 @@ python3 transform.py
 
 # Train
 echo "Training model.."
-python3 train_para.py
+python3 train_trees_para.py
 
 # Evaluate
 echo "Evaluating model.."
-python3 eval.py
+python3 eval_trees.py
 
 echo "Done!"

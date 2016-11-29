@@ -22,7 +22,7 @@ K = tag_count
 mu = np.random.rand(K, word_count)
 
 # Get chunks
-chunk_reader = helpers.ChunkReader(post_filename=config.paths.TRAIN_DATA_IDX, chunk_size=config.data.CHUNK_SIZE_DEBUG) # TODO: Change
+chunk_reader = helpers.ChunkReader(post_filename=config.paths.TRAIN_DATA_IDX, chunk_size=config.data.CHUNK_SIZE) # TODO: Change
 chunks = [chunk for chunk in chunk_reader]
 
 

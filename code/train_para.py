@@ -8,8 +8,6 @@ import time
 import helpers
 import config
 
-#np.random.seed(42)
-
 # Read tags
 tags, tag2idx, tag_count = helpers.read_tags()
 
@@ -23,7 +21,7 @@ K = tag_count
 mu = np.random.rand(K, word_count)
 
 # Get chunks
-chunk_reader = helpers.ChunkReader(post_filename=config.paths.TRAIN_DATA_IDX, chunk_size=config.data.CHUNK_SIZE_DEBUG) # TODO: Change
+chunk_reader = helpers.ChunkReader(post_filename=config.paths.TRAIN_DATA_IDX, chunk_size=config.data.CHUNK_SIZE) # TODO: Change
 chunks = [chunk for chunk in chunk_reader]
 chunk_count = len(chunks)
 
@@ -105,7 +103,7 @@ for iteration in range(0, config.algorithm.MAX_ITER):
     # Check convergence criteria
     mu_norm = np.linalg.norm(mu - mu_old)
 
-    print('Iteration took: %.4fs' % (time.time() - start))
+    print('Iteration %d took: %.4fs' % (iteration + 1, time.time() - start))
 
     if mu_norm < config.algorithm.EPSILON:
         print('Converged after %d iterations' % (iteration+1))

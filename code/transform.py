@@ -14,7 +14,7 @@ words, word2idx, word_count = helpers.read_words()
 text_count = config.text.get_text_count()
 
 # Read chunks
-chunk_reader = helpers.ChunkReader(post_filename=config.paths.POST, chunk_size=config.data.CHUNK_SIZE_DEBUG) # TODO: Change
+chunk_reader = helpers.ChunkReader(post_filename=config.paths.POST, chunk_size=config.data.CHUNK_SIZE) # TODO: Change
 all_chunks = [chunk for chunk in chunk_reader]
 
 # Split chunks in training and test

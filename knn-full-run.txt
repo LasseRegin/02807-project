@@ -1,0 +1,106 @@
+➜  02807-project git:(master) ✗ ./run.sh
+Extracting posts..
+Transforming posts..
+Training model..
+Iteration 1 took: 648.1064s
+Iteration 2 took: 648.9407s
+Iteration 3 took: 646.9704s
+Iteration 4 took: 648.7566s
+Iteration 5 took: 648.1148s
+Iteration 6 took: 646.7420s
+Iteration 7 took: 646.3909s
+Iteration 8 took: 648.9011s
+Iteration 9 took: 645.2177s
+Iteration 10 took: 647.6647s
+Iteration 11 took: 646.4915s
+Iteration 12 took: 645.6246s
+Iteration 13 took: 646.1674s
+Iteration 14 took: 647.6933s
+Iteration 15 took: 647.2803s
+Iteration 16 took: 645.3922s
+Iteration 17 took: 646.9103s
+Iteration 18 took: 646.9988s
+Iteration 19 took: 645.9133s
+Iteration 20 took: 646.3711s
+Iteration 21 took: 647.3746s
+Iteration 22 took: 647.6924s
+Iteration 23 took: 646.0319s
+Iteration 24 took: 645.7518s
+Iteration 25 took: 646.5239s
+Iteration 26 took: 646.5453s
+Iteration 27 took: 645.5855s
+Iteration 28 took: 647.3823s
+Iteration 29 took: 645.5778s
+Iteration 30 took: 645.7876s
+Iteration 31 took: 645.8336s
+Iteration 32 took: 647.0543s
+Iteration 33 took: 645.8316s
+Iteration 34 took: 651.9619s
+Iteration 35 took: 646.1314s
+Iteration 36 took: 743.2465s
+Iteration 37 took: 709.8258s
+Iteration 38 took: 712.9740s
+Iteration 39 took: 722.1169s
+Iteration 40 took: 772.5679s
+Iteration 41 took: 699.4485s
+Iteration 42 took: 728.3079s
+Iteration 43 took: 729.2280s
+Iteration 44 took: 705.9571s
+Iteration 45 took: 766.9088s
+Iteration 46 took: 769.7058s
+Iteration 47 took: 709.5610s
+Iteration 48 took: 674.3298s
+Iteration 49 took: 657.3507s
+Iteration 50 took: 649.5410s
+Iteration 51 took: 656.2614s
+Iteration 52 took: 662.5750s
+Iteration 53 took: 655.4439s
+Iteration 54 took: 648.7878s
+Iteration 55 took: 646.6761s
+Iteration 56 took: 755.5400s
+Iteration 57 took: 754.3210s
+Iteration 58 took: 737.7881s
+Iteration 59 took: 789.4013s
+Iteration 60 took: 784.3261s
+Iteration 61 took: 647.7691s
+Iteration 62 took: 649.6228s
+Iteration 63 took: 646.5130s
+Iteration 64 took: 646.1334s
+Iteration 65 took: 646.9579s
+Iteration 66 took: 647.2239s
+Iteration 67 took: 648.3448s
+Iteration 68 took: 647.7786s
+Iteration 69 took: 645.5215s
+Iteration 70 took: 646.4811s
+Iteration 71 took: 648.8702s
+Iteration 72 took: 645.5583s
+Iteration 73 took: 654.5301s
+Iteration 74 took: 650.3032s
+Iteration 75 took: 645.6795s
+Iteration 76 took: 654.8227s
+Iteration 77 took: 648.2537s
+Iteration 78 took: 761.4858s
+Iteration 79 took: 693.5872s
+Converged after 79 iterations
+Evaluating model..
+P@1:	0.0403
+P@2:	0.0863
+P@3:	0.1331
+P@4:	0.1743
+P@5:	0.2132
+P@6:	0.2523
+P@7:	0.2907
+P@8:	0.3292
+P@9:	0.3691
+P@10:	0.4122
+P@11:	0.4578
+P@12:	0.5053
+P@13:	0.5535
+P@14:	0.6042
+P@15:	0.6588
+P@16:	0.7183
+P@17:	0.7833
+P@18:	0.8517
+P@19:	0.9319
+P@20:	1.0000
+Done!

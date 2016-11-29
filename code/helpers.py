@@ -8,8 +8,28 @@ from xml.etree import ElementTree as ET
 from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import norm as sparse_norm
 from sklearn.metrics.pairwise import cosine_similarity
+#from sklearn.preprocessing import normalize
+
+import Stemmer
+
+from nltk.stem import WordNetLemmatizer
+lemmatizer = WordNetLemmatizer()
 
 import config
+
+stemmer = Stemmer.Stemmer('english')
+word_to_stem = {}
+def stem_word(word):
+    if not word in word_to_stem:
+        word_to_stem[word] = stemmer.stemWord(word)
+    return word_to_stem[word]
+
+word_to_lemma = {}
+def lemmatize_word(word):
+    if not word in word_to_lemma:
+        word_to_lemma[word] = lemmatizer.lemmatize(word)
+    return word_to_lemma[word]
+
 
 def chunk_to_sparse_mat(chunk, word_count):
     with open(config.paths.TRAIN_DATA_IDX, 'r') as f:
@@ -28,7 +48,10 @@ def chunk_to_sparse_mat(chunk, word_count):
 
         if has_data:
             # NOTE: maybe use float32 datatype
-            X = csr_matrix((data, indices, indptr), dtype=np.uint16, shape=(len(indptr) - 1, word_count))
+            #X = csr_matrix((data, indices, indptr), dtype=np.uint16, shape=(len(indptr) - 1, word_count))
+            X = csr_matrix((data, indices, indptr), dtype=np.float32, shape=(len(indptr) - 1, word_count))
+            #X = normalize(X, norm='l2', axis=1)
+
 
             return X, tags
         else:
@@ -56,14 +79,14 @@ def chunk_to_indices(chunk, f):
     # Read end of chunk until end of line
     chunk_decoded = f.read(chunk[1])
 
-    ## Split in lines (Removing the last newline)
+    # Split in lines (Removing the last newline)
     lines = chunk_decoded.rstrip('\n').split('\n')
 
     for line in lines:
         line_splitted = line.split(',')
         if len(line_splitted) == 2:
-            input_indices  = map(int, line_splitted[0].split(' '))
-            target_indices = map(int, line_splitted[1].split(' '))
+            input_indices  = map(int, filter(lambda x: len(x) > 0, line_splitted[0].split(' ')))
+            target_indices = map(int, filter(lambda x: len(x) > 0, line_splitted[1].split(' ')))
             yield input_indices, target_indices
 
 
@@ -175,7 +198,6 @@ def clean_string(text):
     text = reg_symbols.sub(' ', text)
 
     # Remove suffix from words
-    # TODO: Maybe replace english suffix with real word
     text = reg_suf_1.sub(' ', text)
     text = reg_suf_2.sub(' ', text)
     text = reg_suf_3.sub(' ', text)
@@ -208,6 +230,12 @@ def clean_string(text):
 
     # Convert to lowercase
     text = text.lower()
+
+    # Stem each word
+    text = ' '.join(stem_word(word) for word in text.split(' '))
+
+    # Lemmatize each word
+    text = ' '.join(lemmatize_word(word) for word in text.split(' '))
 
     return text
 

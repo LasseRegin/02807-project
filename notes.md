@@ -1,26 +1,11 @@
 
-# Idea
+# Plan
 
-Use MapReduce to find N top used tags. Use the tags to find all the posts
-with the given tags (maybe also with MapReduce). Use `mrjob`.
-
-Then train some ML model to predict the tags from a given post.
+Run the K-means on all posts.
 
 
-## Very ambitious idea extension
-
-Cluster all posts and train ML models on the posts/tag subset in order to cover
-the entire tag space, hence making it possible to predict possible tags for any
-given text, and not only the top N tags.
-
-
-
-
-# Runs
-
-Using sequential naive implementation
-
-```
-time python3 extraction.py
-python3 extraction.py  1507.81s user 77.45s system 97% cpu 27:06.29 total
-```
+Train extremely randomized trees on segments of the data.
+I have the unique words (dictionary) and the unique tags, so it is possible
+to train an ensemble of extremely randomized trees (or random forests) all based
+on small part of the trainin set. Each tree can be saved to a file, and on
+evaluation the trees can be loaded and some kind of majority vote can be used.
