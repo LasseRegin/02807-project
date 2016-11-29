@@ -2,18 +2,205 @@
 
 \section{Methods}
 
-For modelling the distribution of the post tags an unsupervised approach is used.
+In this section the different methods and steps in the process will be explained.
 
-The data will be presented using feature-hashing. Each post will be
-transformed to a fixed-size feature vector resulting in each post being a point
-in a given feature space.
+\subsection{Preprocessing}
 
-A training set of posts will be clustered into $K$ clusters where $K$ is the
-number of distinct tags in the data, resulting in $K$ cluster centroids.
+The preprocessing step regards the transforming of questions in an \texttt{XML}
+file to processed questions in a \texttt{.csv} file. This also includes disregarding
+questions that does not have any of the top $N$ tags attached.
+At the same time two other \texttt{.csv} files are created: One containing all
+unique words in the extracted questions, and one containing the unique tags used.
 
-When predicting a given post the tags of the closest $n$ centroids will be
-assigned the post.
+The processing of each questions contains the following steps (code can be found
+in \cref{app:preprocess-text})
+\begin{enumerate}
+  \item Replace all links with \textit{<link>}
+  \item Remove certain unwanted symbols
+  \item Remove suffix from words (e.g. \textit{haven't} $\rightarrow$ \textit{have})
+  \item Remove line breaks
+  \item Replace digits with \textit{<digit>}
+  \item Remove double whitespaces
+  \item Reduce words to their word stem (e.g. \textit{lines} $\rightarrow$ \textit{line})
+  \item Lemmatize words (e.g. \textit{better} $\rightarrow$ \textit{good})
+\end{enumerate}
 
-The cluster algorithm \textit{K-means} will initially be used, and due to the
-size of the dataset a normal trivial implementation of the algorithm will not
-suffice, hence a parallel version will be implemented.
+Finally the unique words used as word dictionary were filtered by removing
+words occuring in more than $50\%$ of the questions and words occuring in less
+than $0.1\%$ of the questions. Also english stop words were removed making use
+of the \texttt{NLTK} library.
+
+All these steps are used in order to reduce the dimensionality of the word space
+without really removing much information. Here the assumption is, that e.g. words
+like \textit{better} and \textit{good} kind of adds the same meaning to the
+sentence, and the same with e.g. two numbers.
+
+
+\subsection{Distributed file loading}
+
+Since the size of the final processed questions file is approximately $11$GB,
+it will not be feasible to load into memory on most laptops. Therefore it will
+be necessary to load the file in smaller chunks.
+
+The following code illustrates how the file \texttt{posts.csv} can be divided
+into byte-chunks. I.e. the following generator yields a list of tuples
+\texttt{(from\_byte, size)} where \texttt{from\_byte} is the index in the file in
+bytes and \texttt{size} is the size of the given chunk in bytes.
+
+\begin{lstlisting}[language=python]
+with open('posts.csv', 'rb') as f:
+  while True:
+    start = f.tell()
+    f.seek(chunk_size, 1)
+    s = f.readline()
+    yield start, f.tell() - start
+    if not s:   break
+\end{lstlisting}
+
+The \texttt{chunk\_size} is a given minimum size of each chunk. The
+\texttt{f.readline()} makes sure the chunk ends at the end of a line.
+
+A chunk of lines from the file can then be loaded using the following lines
+
+\begin{lstlisting}[language=python]
+# Seek to chunk start bytes
+f.seek(from_bytes)
+
+# Read end of chunk until end of line
+chunk = f.read(size)
+
+# Split in lines (Removing the last newline)
+lines = chunk.rstrip('\n').split('\n')
+\end{lstlisting}
+
+
+\subsection{K-means clustering}
+
+\subsubsection{Serial}
+
+The regular serial in-memory version of K-means clustering algorithm is shown in
+\cref{alg:k-means}.
+\begin{algorithm}[H]
+  \begin{algorithmic}[1]
+    \Procedure{KMeansClustering}{X, K}
+    \State \# Initialize cluster centers
+    \For{$k=0$ to $K-1$}
+      \State $\mu_k \gets \text{random point in X}$
+    \EndFor
+    \State \# Run iterations
+    \While{$iter < max\_iter$}
+      \State \# Update cluster means
+      \State $\mu_\text{old} = \mu$
+      \For{$k=0$ to $K-1$}
+        \State $C_k \gets \{\text{Points in }X\text{ closest to }\mu_k\}$
+        \State $\mu_k \gets \frac{1}{\vert C_k \vert} \sum_{x_i \in C_k} x_i$
+      \EndFor
+      \State \# Check convergence criteria
+      \State $norm \gets \left\Vert \mu - \mu_\text{old} \right\Vert$
+      \If{$norm < \epsilon$}
+        \State break
+      \EndIf
+    \EndWhile
+  \end{algorithmic}
+  \caption{Serial K-means clustering algorithm}
+  \label{alg:k-means}
+\end{algorithm}
+
+\subsubsection{Distributed}
+
+The proposed distributed K-means clustering algorithm, which loads the data matrix
+$X$ in chunks, is shown in \cref{alg:k-means-dist}.
+\begin{algorithm}[H]
+  \begin{algorithmic}[1]
+    \Procedure{KMeansClusteringDistributed}{X, K}
+    \State \# Initialize cluster centers
+    \For{$k=0$ to $K-1$}
+      \State $\mu_k \gets \text{random point in X}$
+    \EndFor
+    \State \# Run iterations
+    \While{$iter < max\_iter$}
+      \State \# Initialize shared cluster sums and cluster point counts.
+      \For{$k=0$ to $K-1$}
+        \State $C\text{sum}_k \gets \mathbf{0}$
+        \State $C\text{count}_k \gets 0$
+      \EndFor
+
+      \State \# Process each chunk in a distributed manner
+      \ForAll{Chunks $X_\text{chunk}$ in X}
+        \For{$k=0$ to $K-1$}
+          \State $C_k \gets \{\text{Points in }X_\text{chunk}\text{ closest to }\mu_k\}$
+          \State $C\text{sum}_k \gets C\text{sum}_k + \sum_{x_i \in C_k} x_i$
+          \State $C\text{count}_k \gets C\text{count}_k + \vert C_k \vert$
+        \EndFor
+      \EndFor
+
+      \State \# Gather results and update cluster means
+      \State $\mu_\text{old} = \mu$
+      \For{$k=0$ to $K-1$}
+        \State $\mu_k \gets \frac{C\text{sum}_k}{C\text{count}_k}$
+      \EndFor
+
+      \State \# Check convergence criteria
+      \State $norm \gets \left\Vert \mu - \mu_\text{old} \right\Vert$
+      \If{$norm < \epsilon$}
+        \State break
+      \EndIf
+    \EndWhile
+  \end{algorithmic}
+  \caption{Distributed K-means clustering algorithm}
+  \label{alg:k-means-dist}
+\end{algorithm}
+
+\subsubsection{Implementation}
+
+Simplified implementation of distributed K-means (only a single iteration is
+shown) see full code in \cref{app:k-means}:
+
+\begin{lstlisting}[language=python]
+cluster_sums   = {k: np.zeros((1, word_count)) for k in range(0, K)}
+cluster_counts = {k: 0 for k in range(0, K)}
+
+for chunk in chunks:
+
+  # Load chunk lines to sparse matrix
+  X = chunk_to_sparse_mat(chunk)
+
+  # Get closest cluster indices
+  max_idx = sparse_matrix_to_cluster_indices(X, mu)
+
+  # Assign points to clusters
+  mu_subs = collections.defaultdict(list)
+  for i, k in enumerate(max_idx):
+    mu_subs[k].append(X[i].toarray())
+
+  # Compute sub-means
+  for k in range(0, K):
+    mu_sub = mu_subs[k]
+    if len(mu_sub) == 0:    continue
+    cluster_sums[k] += np.asarray(mu_sub).mean(axis=0)
+    cluster_counts[k] += 1
+
+# Save old means
+mu_old = np.array(mu, copy=True)
+
+# Update means
+for k in range(0, K):
+  count = cluster_counts[k]
+  if count == 0:  continue
+  mu[k] = cluster_sums[k] / cluster_counts[k]
+
+# Check convergence criteria
+mu_norm = np.linalg.norm(mu - mu_old)
+
+if mu_norm < epsilon:
+  print('Converged after %d iterations' % (iteration+1))
+  break
+\end{lstlisting}
+
+
+
+
+
+
+
+\subsection{Parallel processing}

@@ -22,6 +22,14 @@
 \usepackage[bibstyle=ieee,citestyle=numeric-comp]{biblatex} % Benyt BibLaTeX til formatering
 \usepackage{cleveref} % \cref's (has to be the last loaded ref. package)
 
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+
+\makeatletter
+\def\BState{\State\hskip-\ALG@thistlm}
+\makeatother
+
 %listing settings, æøå support, font config, line number, left lines
 \lstset{
   breakatwhitespace=false, breaklines=true,
@@ -64,12 +72,14 @@
 \input{content/introduction}
 \input{content/data}
 \input{content/methods}
-\input{content/plan}
+\input{content/results}
+\input{content/discussion}
+\input{content/conclusion}
 
 
-%\pagebreak
-%\appendix
-%\include{appendix}
+\pagebreak
+\appendix
+\include{appendix}
 
 \pagebreak
 \printbibliography

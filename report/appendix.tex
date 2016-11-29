@@ -1,0 +1,248 @@
+
+\section{Code snippets}
+
+\subsection{Preprocess text}
+\label{app:preprocess-text}
+
+\begin{lstlisting}[language=python]
+import re
+import Stemmer
+from nltk.stem import WordNetLemmatizer
+lemmatizer = WordNetLemmatizer()
+
+# Precompile regular expressions
+reg_links  = re.compile(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+')
+re_digits  = re.compile(r'\b\d+\b')
+re_spaces  = re.compile(r'\s{2,}')
+
+reg_symbols = re.compile(r'[^A-Za-z0-9(),!?\'\`]')
+reg_symb_1 = re.compile(r',')
+reg_symb_2 = re.compile(r'!')
+reg_symb_3 = re.compile(r'\(')
+reg_symb_4 = re.compile(r'\)')
+reg_symb_5 = re.compile(r'\?')
+reg_symb_6 = re.compile(r'\'')
+
+reg_suf_1 = re.compile(r'\'s')
+reg_suf_2 = re.compile(r'\'ve')
+reg_suf_3 = re.compile(r'n\'t')
+reg_suf_4 = re.compile(r'\'re')
+reg_suf_5 = re.compile(r'\'d')
+reg_suf_6 = re.compile(r'\'ll')
+
+stemmer = Stemmer.Stemmer('english')
+word_to_stem = {}
+def stem_word(word):
+    if not word in word_to_stem:
+        word_to_stem[word] = stemmer.stemWord(word)
+    return word_to_stem[word]
+
+word_to_lemma = {}
+def lemmatize_word(word):
+    if not word in word_to_lemma:
+        word_to_lemma[word] = lemmatizer.lemmatize(word)
+    return word_to_lemma[word]
+
+def clean_string(text):
+  # Replace links with link identifier
+  text = reg_links.sub('<link>', text)
+
+  # Remove certain symbols
+  text = reg_symbols.sub(' ', text)
+
+  # Remove suffix from words
+  text = reg_suf_1.sub(' ', text)
+  text = reg_suf_2.sub(' ', text)
+  text = reg_suf_3.sub(' ', text)
+  text = reg_suf_4.sub(' ', text)
+  text = reg_suf_5.sub(' ', text)
+  text = reg_suf_6.sub(' ', text)
+
+  # Remove "'" from string
+  text = reg_symb_6.sub('', text)
+
+  # Replace breaks with spaces
+  text = text.replace('<br />', ' ')
+  text = text.replace('\r\n', ' ')
+  text = text.replace('\r', ' ')
+  text = text.replace('\n', ' ')
+
+  # Pad symbols with spaces on both sides
+  text = reg_symb_1.sub(' , ', text)
+  text = reg_symb_2.sub(' ! ', text)
+  text = reg_symb_3.sub(' ( ', text)
+  text = reg_symb_4.sub(' ) ', text)
+  text = reg_symb_5.sub(' ? ', text)
+
+  # Replace digits with 'DIGIT'
+  text = re_digits.sub('<DIGIT>', text)
+
+  # Remove double whitespaces
+  text = re_spaces.sub(' ', text)
+  text = text.strip()
+
+  # Convert to lowercase
+  text = text.lower()
+
+  # Stem each word
+  text = ' '.join(stem_word(word) for word in text.split(' '))
+
+  # Lemmatize each word
+  text = ' '.join(lemmatize_word(word) for word in text.split(' '))
+\end{lstlisting}
+
+
+\subsection{Distributed K-means}
+\label{app:k-means}
+
+\begin{lstlisting}[language=python]
+import math
+import collections
+import numpy as np
+import multiprocessing
+import time
+
+import helpers
+import config
+
+# Read tags
+tags, tag2idx, tag_count = helpers.read_tags()
+
+# Read words
+words, word2idx, word_count = helpers.read_words()
+
+# Clusters
+K = tag_count
+
+# Initialize cluster centers
+mu = np.random.rand(K, word_count)
+
+# Get chunks
+chunk_reader = helpers.ChunkReader(post_filename=config.paths.TRAIN_DATA_IDX, chunk_size=config.data.CHUNK_SIZE) # TODO: Change
+chunks = [chunk for chunk in chunk_reader]
+chunk_count = len(chunks)
+
+# Split chunks across processes
+n = math.ceil(chunk_count / config.algorithm.PROCESS_COUNT)
+chunks_split = []
+for i in range(0, len(chunks), n):
+  chunks_split.append(chunks[i:i+n])
+
+# Initialize shared variable manager
+manager = multiprocessing.Manager()
+lock = multiprocessing.Lock()
+
+# Define function to run in parallel
+def process_chunks(chunks, word_count, K, mu, cluster_sums, cluster_counts, lock):
+  for chunk in chunks:
+
+    # Convert to sparse matrix
+    X, _ = helpers.chunk_to_sparse_mat(chunk, word_count)
+
+    if X is None:   continue
+
+    # Get closest cluster indices
+    max_idx = helpers.sparse_matrix_to_cluster_indices(X, mu)
+
+    mu_subs = collections.defaultdict(list)
+    for i, k in enumerate(max_idx):
+      mu_subs[k].append(X[i].toarray())
+
+    # Compute sub-means
+    for k in range(0, K):
+      mu_sub = mu_subs[k]
+      if len(mu_sub) == 0:    continue
+
+      with lock:
+        cluster_sums[k] = cluster_sums[k] + np.asarray(mu_sub, dtype=np.float32).mean(axis=0)
+        cluster_counts[k] += 1
+
+
+for iteration in range(0, config.algorithm.MAX_ITER):
+  start = time.time()
+
+  cluster_sums = manager.dict({k: np.zeros((1, word_count)) for k in range(0, K)})
+  cluster_counts = manager.dict({k: 0 for k in range(0, K)})
+
+  # Init processes
+  processes = []
+  for i, chunk_list in enumerate(chunks_split):
+    p = multiprocessing.Process(target=process_chunks, kwargs={
+      'chunks': chunk_list,
+      'word_count': word_count,
+      'K': K,
+      'mu': mu,
+      'cluster_sums': cluster_sums,
+      'cluster_counts': cluster_counts,
+      'lock': lock
+    })
+    processes.append(p)
+
+  # Start processes
+  for p in processes:
+    p.start()
+
+  #print('Started %d processes' % (len(processes)))
+
+  # Wait for processes to finish
+  for p in processes:
+    p.join()
+
+  # Save old means
+  mu_old = np.array(mu, copy=True)
+
+  # Update means
+  for k in range(0, K):
+    count = cluster_counts[k]
+    if count == 0:  continue
+    mu[k] = cluster_sums[k] / cluster_counts[k]
+
+  # Check convergence criteria
+  mu_norm = np.linalg.norm(mu - mu_old)
+
+  print('Iteration %d took: %.4fs' % (iteration + 1, time.time() - start))
+
+  if mu_norm < config.algorithm.EPSILON:
+    print('Converged after %d iterations' % (iteration+1))
+    break
+
+
+# Determine cluster tags
+cluster_tag_counts = {k: {tag: 0 for tag in range(0, K)} for k in range(0, K)}
+for chunk in chunks:
+
+  # Convert to sparse matrix
+  X, tags = helpers.chunk_to_sparse_mat(chunk, word_count)
+
+  if X is None:   continue
+
+  # Get closest cluster indices
+  max_idx = helpers.sparse_matrix_to_cluster_indices(X, mu)
+
+  # Count cluster tags
+  for i, k in enumerate(max_idx):
+    for tag_idx in tags[i]:
+      cluster_tag_counts[k][tag_idx] += 1
+
+# Assign tags to clusters
+tags_labelled = []
+cluster2tag = {}
+for k, tag_counts in cluster_tag_counts.items():
+  tag_counts_sorted = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+  for tag, count in tag_counts_sorted:
+    if tag not in tags_labelled:
+      cluster2tag[k] = tag
+      tags_labelled.append(tag)
+      break
+
+# Save cluster tags dict
+config.data.save_cluster_tags(cluster_tags=cluster2tag)
+
+# Save means
+with open(config.paths.MU, 'wb') as f:
+  np.save(f, mu)
+\end{lstlisting}
+
+
+
+\todo{Include helper functions and config}
