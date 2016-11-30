@@ -16,5 +16,29 @@
   {}
 \endgroup
 
+
+\refsection{0}
+  \sortlist{none}{none}
+    \entry{numerical-optimization}{book}{}
+      \name{author}{2}{}{%
+        {{hash=d7279523f3b0d0fb63fc443b7151076c}{Nocedal}{N\bibinitperiod}{Lorge}{L\bibinitperiod}{}{}{}{}}%
+        {{hash=809f9567ebd4e954e5d23c4072d99479}{Wright}{W\bibinitperiod}{Stephen\bibnamedelima J.}{S\bibinitperiod\bibinitdelim J\bibinitperiod}{}{}{}{}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{e4227df8694591d608ab09d9d31601a3}
+      \strng{fullhash}{e4227df8694591d608ab09d9d31601a3}
+      \field{sortinit}{0}
+      \field{sortinithash}{990108227b3316c02842d895999a0165}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{9780387303031}
+      \field{series}{Springer Series in Operations Research and Financial Engineering}
+      \field{title}{Numerical Optimization}
+      \field{year}{2006}
+    \endentry
+  \endsortlist
+\endrefsection
 \endinput
 

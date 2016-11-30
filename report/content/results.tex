@@ -1,3 +1,43 @@
 %!TEX root = ../main.tex
 
 \section{Results}
+
+For evaluating the performance of the models the \textit{Precision at $K$} metric
+is used denoted Precision$@K$. This is given as the the fraction of tags correctly
+retrieved in the top $K$ predicted tags
+\begin{equation}
+  \text{Precision}@K = \frac{\text{\# of correctly retrieved tags in top }K\text{ predicted tags}}
+  {\text{\# of tags predicted}}
+\end{equation}
+
+The provided results are obtained by evaluating the models on a testset which
+consists of $33\%$ of the original dataset, which was left out during training.
+
+In \cref{tab:results} the obtained performance of the models can be seen.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{l | c c c}
+    Model & Precision$@1$ & Precision$@5$ & Precision$@10$ \\ \hline
+    Baseline & $0.050$ & $0.250$ & $0.500$ \\
+    K-means clustering & $0.040$ & $0.213$ & $0.412$ \\
+    Decision tree ensemble & $\mathbf{0.596}$ & $\mathbf{0.936}$ & $\mathbf{0.984}$
+  \end{tabular}
+  \caption{Precision$@K$ values for the different models where \textit{Baseline}
+           is guessing a single tag at random.}
+  \label{tab:results}
+\end{table}
+
+In \cref{tab:run-times} the run-times for the models can be seen.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{l | c c c}
+    Model & Training & Prediction \\ \hline
+    K-means clustering & $\approx 24$hours & $\approx 1$min \\
+    Decision tree ensemble & $\approx 10$min & $\approx 2$hours
+  \end{tabular}
+  \caption{Approximate run-times for the models run one a $2.7$ GHz Intel Core i5
+           with $4$ physical cores, and $8$GB memory.}
+  \label{tab:run-times}
+\end{table}

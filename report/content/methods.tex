@@ -2,40 +2,6 @@
 
 \section{Methods}
 
-In this section the different methods and steps in the process will be explained.
-
-\subsection{Preprocessing}
-
-The preprocessing step regards the transforming of questions in an \texttt{XML}
-file to processed questions in a \texttt{.csv} file. This also includes disregarding
-questions that does not have any of the top $N$ tags attached.
-At the same time two other \texttt{.csv} files are created: One containing all
-unique words in the extracted questions, and one containing the unique tags used.
-
-The processing of each questions contains the following steps (code can be found
-in \cref{app:preprocess-text})
-\begin{enumerate}
-  \item Replace all links with \textit{<link>}
-  \item Remove certain unwanted symbols
-  \item Remove suffix from words (e.g. \textit{haven't} $\rightarrow$ \textit{have})
-  \item Remove line breaks
-  \item Replace digits with \textit{<digit>}
-  \item Remove double whitespaces
-  \item Reduce words to their word stem (e.g. \textit{lines} $\rightarrow$ \textit{line})
-  \item Lemmatize words (e.g. \textit{better} $\rightarrow$ \textit{good})
-\end{enumerate}
-
-Finally the unique words used as word dictionary were filtered by removing
-words occuring in more than $50\%$ of the questions and words occuring in less
-than $0.1\%$ of the questions. Also english stop words were removed making use
-of the \texttt{NLTK} library.
-
-All these steps are used in order to reduce the dimensionality of the word space
-without really removing much information. Here the assumption is, that e.g. words
-like \textit{better} and \textit{good} kind of adds the same meaning to the
-sentence, and the same with e.g. two numbers.
-
-
 \subsection{Distributed file loading}
 
 Since the size of the final processed questions file is approximately $11$GB,
@@ -74,6 +40,29 @@ lines = chunk.rstrip('\n').split('\n')
 \end{lstlisting}
 
 
+\subsection{Feature hashing}
+
+In order to work with the text data each line of word indices is transformed into
+a sparse matrix using the word dictionary and \texttt{scipy}'s
+\textit{Compressed Sparse Row matrix} \texttt{scipy.sparse.csr\_matrix}.
+
+A file chunk can be converted to a sparse matrix representation in the following
+way (simplified code):
+
+\begin{lstlisting}[language=python]
+indptr, indices, data, tags = [0], [], [], []
+for input_indices in chunk_to_indices(chunk):
+  for idx in input_indices:
+    indices.append(idx)
+    data.append(1)
+  indptr.append(len(indices))
+
+X = csr_matrix(
+  (data, indices, indptr),
+  shape=(len(indptr) - 1, word_count)
+)
+\end{lstlisting}
+
 \subsection{K-means clustering}
 
 \subsubsection{Serial}
@@ -105,6 +94,12 @@ The regular serial in-memory version of K-means clustering algorithm is shown in
   \caption{Serial K-means clustering algorithm}
   \label{alg:k-means}
 \end{algorithm}
+
+The distance measure used for finding closest points in $X$ is the
+\textit{cosine similarity}. I.e. the distance will be defined as
+\begin{equation}
+  \text{dist}(x_1, x_2) = \frac{x_1 x_2}{\left\Vert x_1 \right\Vert \left\Vert x_2 \right\Vert}
+\end{equation}
 
 \subsubsection{Distributed}
 
@@ -153,8 +148,8 @@ $X$ in chunks, is shown in \cref{alg:k-means-dist}.
 
 \subsubsection{Implementation}
 
-Simplified implementation of distributed K-means (only a single iteration is
-shown) see full code in \cref{app:k-means}:
+Simplified implementation of a single iteration of the distributed K-means
+(see full code in \cref{app:k-means}):
 
 \begin{lstlisting}[language=python]
 cluster_sums   = {k: np.zeros((1, word_count)) for k in range(0, K)}
@@ -197,10 +192,117 @@ if mu_norm < epsilon:
   break
 \end{lstlisting}
 
+\subsection{Distributed decision tree ensemble}
 
+An alternative to the unsupervised approach is a supervised approach using
+an ensemble of decision trees. This idea is inspired by the
+\textit{Random Forest} model which is an ensemble of decision trees trained on
+bootstrapped features.
 
+For this specific task the decision trees are trained on each chunk of data.
+Hence the randomness here lies more in the fact that each tree will only see
+a subset of the training data.
 
+The algorithm outline can be seen in \cref{alg:decision-trees}.
 
+\begin{algorithm}[H]
+  \begin{algorithmic}[1]
+    \Procedure{DecisionTreeEnsembleDistributed}{X, Y, K}
 
+    \State \# Process each chunk in a distributed manner
+    \ForAll{Chunks $(X_\text{chunk}, Y_\text{chunk})$ in (X, Y)}
+      \State $T \gets \text{Decision tree trained on } (X_\text{chunk}, Y_\text{chunk})$
+      \State \# Dump decision tree to file
+    \EndFor
+
+  \end{algorithmic}
+  \caption{Distributed decision tree ensemble algorithm}
+  \label{alg:decision-trees}
+\end{algorithm}
+
+Finally the prediction of tags can be done by computing tag probabilities for
+each trained decision tree, and basing the prediction on the mean tag probabilities
+of all classifiers.
+
+\subsubsection{Implementation}
+
+Simplified implementation of the training of the distributed decision tree
+ensemble algorithm (see full code in \cref{app:decision-trees}):
+
+\begin{lstlisting}[language=python]
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.externals import joblib
+
+for chunk in chunks:
+
+  # Convert to sparse matrix
+  X, Y = chunk_to_sparse_mat(chunk)
+
+  # Train decision tree
+  clf = DecisionTreeClassifier(
+      splitter='best',
+      max_features='auto',
+      max_depth=None,
+  )
+
+  # Fit data
+  clf.fit(X, Y)
+
+  # Save trained classifier
+  joblib.dump(clf, classifier_filename)
+\end{lstlisting}
+
+Here the \textit{scikit-learn} library is used for the implementation of
+the decision tree class \texttt{DecisionTreeClassifier}.
 
 \subsection{Parallel processing}
+
+Since these proposed algorithms are implemented in a distributed manner it makes
+sense to run them in parallel. For this the Python \texttt{multiprocessing}
+library is used.
+
+The general parallel implementations used in this project follow the following
+structure:
+
+\begin{lstlisting}[language=python]
+import multiprocessing
+
+# Initialize shared variable manager
+manager = multiprocessing.Manager()
+lock = multiprocessing.Lock()
+
+for chunks in list_of_chunks:
+  p = multiprocessing.Process(
+    target=process_chunks,
+    kwargs={
+      'chunks': chunks,
+      ...
+      'lock': lock
+    }
+  )
+  processes.append(p)
+
+# Start processes
+for p in processes:
+    p.start()
+
+# Wait for processes to finish
+for p in processes:
+    p.join()
+
+# Use results
+# ...
+\end{lstlisting}
+
+where \texttt{process\_chunks} processes a set of chunks of the data file (and
+thereby varies from K-means to decision tree ensemble). The \texttt{manager}
+is used for sharing values between spawned processes and the \texttt{lock} is
+used for making sure multiple processes are not writing to a shared value
+simultaneously (which will result in only one of the values being actually
+written).
+
+Example of how the multiprocess lock works
+\begin{lstlisting}[language=python]
+with lock:
+  shared_counter += 1
+\end{lstlisting}

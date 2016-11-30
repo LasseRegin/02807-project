@@ -32,6 +32,7 @@ class paths:
 
     # Evaluations
     PRECISION_AT_K = os.path.join(DATA_FOLDER, 'precision.csv')
+    PRECISION_AT_K_TREES = os.path.join(DATA_FOLDER, 'precision-trees.csv')
 
     # Classifiers folder
     MODELS_FOLDER = os.path.join(FILEPATH, 'models')

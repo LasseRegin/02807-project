@@ -1,0 +1,35 @@
+%!TEX root = ../main.tex
+
+\section{Preprocessing}
+
+The preprocessing step regards the transforming of questions in an \texttt{XML}
+file to processed questions in a \texttt{.csv} file. The question \texttt{.csv}
+file will consist of a list of word indices from the title and body including
+a list of tag indices for each question.
+This transforming process also includes disregarding questions that does not have
+any of the top $N$ tags attached.
+At the same time two other \texttt{.csv} files are created: One containing all
+unique words in the extracted questions, and one containing the unique tags used.
+
+The processing of each questions contains the following steps (code can be found
+in \cref{app:preprocess-text})
+\begin{enumerate}
+  \item Replace all links with \textit{<link>}
+  \item Remove certain unwanted symbols
+  \item Remove suffix from words (e.g. \textit{haven't} $\rightarrow$ \textit{have})
+  \item Remove line breaks
+  \item Replace digits with \textit{<digit>}
+  \item Remove double whitespaces
+  \item Reduce words to their word stem (e.g. \textit{lines} $\rightarrow$ \textit{line})
+  \item Lemmatize words (e.g. \textit{better} $\rightarrow$ \textit{good})
+\end{enumerate}
+
+Finally the unique words used as word dictionary were filtered by removing
+words occuring in more than $50\%$ of the questions and words occuring in less
+than $0.1\%$ of the questions. Also english stop words were removed making use
+of the \texttt{NLTK} library.
+
+All these steps are used in order to reduce the dimensionality of the word space
+without removing much information. Here the assumption is, that e.g. words
+like \textit{better} and \textit{good} kind of adds the same meaning to the
+sentence, and the same with e.g. two numbers.

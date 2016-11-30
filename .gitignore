@@ -3,7 +3,7 @@ code/data
 code/models
 
 
-## Core latex/pdflatex auxiliary files:
+# Core latex/pdflatex auxiliary files:
 *.aux
 *.lof
 *.log

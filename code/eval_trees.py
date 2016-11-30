@@ -65,7 +65,7 @@ with open(config.paths.TEST_DATA_IDX, 'r') as f:
         print('P@%d:\t%.4f' % (k+1, val))
 
     # Save precision at k
-    with open(config.paths.PRECISION_AT_K, 'w') as f:
+    with open(config.paths.PRECISION_AT_K_TREES, 'w') as f:
         writer = csv.writer(f)
         writer.writerow([
             'P@%d' % (k+1) for k in range(0, tag_count)

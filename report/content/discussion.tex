@@ -1,3 +1,23 @@
 %!TEX root = ../main.tex
 
 \section{Discussion}
+
+From the results shown in \cref{tab:results} it is seen that the K-means
+clustering model performs worse than random guessing a single of the $20$ tags
+for a question. Despite this not being completely comparable since some questions have
+more than a single tag it is still fair to say, that the model did not
+perform very well. This might be due to the fact that the K-means algorithm is
+very sensitive to the initialization of the cluster centers.
+
+
+The decision tree ensemble is seen to perform much better than the K-means model
+and the baseline. When looking at the top 5 predicted tags the model retrieves
+$\approx 94\%$ of the test tags which is a very nice result.
+
+From \cref{tab:run-times} it is seen that training the decision tree ensemble is
+also significantly faster than the K-means model, but using the model for
+predicting takes much longer. This is because the model trains about $1,300$
+decision trees with no hard constraints on the depth of the tree, which results
+in each model being about $2.5$MB which has to be loaded and used for prediction
+on all test observations, and finally the average class probabilities must be
+computed across the $1,300$ decision trees.

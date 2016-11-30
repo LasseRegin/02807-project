@@ -2,16 +2,27 @@
 
 \section{Introduction}
 
-In this project a model predicting tags associating a given text will be
-constructed. The problem will be handled as a classification problem, hence
-a classifier will be trained.
+In this project two models predicting tags associating a given text will be
+proposed, implemented, and tested. The problem will be handled as a
+multi-label classification problem.
 
-The classifier will be trained on posts from Stackoverflow where associated
+The models will be trained on posts from Stackoverflow where associated
 tags have been given.
 
-Initially only the top $20$ frequent tags and posts containing these tags will
-be used for training and prediction.
+The top $20$ frequent tags and posts containing these tags will be used for
+training and prediction.
 
-Finally the model will be evaluated using all tags and posts.
 
-During implementation and debugging a subset of the data will be used.
+The first model is an unsupervised model where the distribution of the tags
+text types are attempted learned using the K-means clustering algorithm
+\cite{numerical-optimization}. By clustering the texts into $20$ clusters each
+cluster will (hopefully) represent a given tag. The prediction of tags can
+then be done by looking at a given text's closest clusters.
+
+
+The second model is a supervised model based on Decision Trees
+\cite{numerical-optimization}. Inspired by the \textit{Random Forest} ensemble
+model an ensemble of decision trees are trained on subsets of the training data,
+and thereby resembles the structure of the \textit{Random Forest} model.
+Prediction of tags are then based on the mean probabilities predicted by all
+decision trees.
