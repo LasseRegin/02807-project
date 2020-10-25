@@ -17,7 +17,8 @@ The first model is an unsupervised model where the distribution of the tags
 text types are attempted learned using the K-means clustering algorithm
 \cite{numerical-optimization}. By clustering the texts into $20$ clusters each
 cluster will (hopefully) represent a given tag. The prediction of tags can
-then be done by looking at a given text's closest clusters.
+then be done by looking at a given text's closest clusters, where each cluster
+has been assigned the tag, which was most present in the cluster during training.
 
 
 The second model is a supervised model based on Decision Trees
